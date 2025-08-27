@@ -1,0 +1,30 @@
+# 探测间隔（秒）
+interval: 10
+
+# 阈值设置
+fail_threshold: 3
+success_threshold: 2
+
+# UDP 服务健康检查配置
+udp:
+  - host: 1.1.1.1
+    port: 12345
+  - host: 1.1.1.2
+    port: 12345
+
+conf_file:
+  - 12345
+  - 80
+
+tcp:
+  - host: 1.1.1.1
+    port: 80
+    url: /health/
+  - host: 1.1.1.2
+    port: 80
+    url: /health/
+
+# Nginx upstream 配置文件路径
+nginx:
+  command: nginx -s reload
+  conf_path: /etc/nginx/conf.d/xxx/   # 文件夹下是  [端口].conf  文件

@@ -1,0 +1,46 @@
+#!/bin/bash
+# 用法: udp_ping_check.sh <HOST> <PORT>
+# 返回: 0 -> 服务健康, 1 -> 服务不可用
+
+
+HOST=$1
+PORT=$2
+STATE_FILE="/tmp/udp_${HOST}_${PORT}.state"
+
+# 连续失败/成功阈值
+FAIL_THRESHOLD=3
+SUCCESS_THRESHOLD=2
+
+if [ -f "$STATE_FILE" ]; then
+    read -r FAIL_COUNT SUCCESS_COUNT STATUS < "$STATE_FILE"
+else
+    FAIL_COUNT=0
+    SUCCESS_COUNT=0
+    STATUS=UP
+fi
+
+RESPONSE=$(echo -n "ping" | nc -u -w1 $HOST $PORT 2>/dev/null)
+
+: "${STATUS:=DOWN}"
+
+if [ "$RESPONSE" = "pong" ]; then
+    FAIL_COUNT=0
+    SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+    if [ "$STATUS" = "DOWN" ] && [ $SUCCESS_COUNT -ge $SUCCESS_THRESHOLD ]; then
+        STATUS=UP
+    fi
+else
+    SUCCESS_COUNT=0
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+    if [ "$STATUS" = "UP" ] && [ $FAIL_COUNT -ge $FAIL_THRESHOLD ]; then
+        STATUS=DOWN
+    fi
+fi
+
+echo "$FAIL_COUNT $SUCCESS_COUNT $STATUS" > "$STATE_FILE"
+
+if [ "$STATUS" = "UP" ]; then
+    exit 0
+else
+    exit 1
+fi
