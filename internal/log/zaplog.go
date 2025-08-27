@@ -7,6 +7,7 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type log interface {
@@ -59,12 +60,28 @@ func (c *customizeLog) newLog() {
 	c.createDir()
 	c.fileRecorder()
 	consoleEncoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
-
+	encoderCfg := zapcore.EncoderConfig{
+		TimeKey:        "time",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.CapitalLevelEncoder, // INFO/ERROR 等大写
+		EncodeTime:     customTimeEncoder,           // 自定义时间格式
+		EncodeDuration: zapcore.StringDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
 	core := zapcore.NewTee(
-		zapcore.NewCore(consoleEncoder, os.Stdout, zap.DebugLevel),
-		//zapcore.NewCore(consoleEncoder, c.std, zap.DebugLevel),
+		//zapcore.NewCore(zapcore.NewConsoleEncoder(encoderCfg), os.Stdout, zap.DebugLevel),
+		zapcore.NewCore(zapcore.NewConsoleEncoder(encoderCfg), c.std, zap.DebugLevel),
 	)
 	c.log = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(2))
+}
+
+func customTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(t.Format("2006-01-02 15:04:05.000"))
 }
 
 func (c *customizeLog) debug(msg string, args ...any) {
